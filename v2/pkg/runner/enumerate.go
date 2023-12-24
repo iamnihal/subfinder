@@ -30,6 +30,13 @@ func (r *Runner) EnumerateSingleDomainWithCtx(ctx context.Context, domain string
 	// Check if the user has asked to remove wildcards explicitly.
 	// If yes, create the resolution pool and get the wildcards for the current domain
 	var resolutionPool *resolve.ResolutionPool
+
+	if r.options.ResultCallback != nil {
+		if r.options.Verbose {
+			r.options.configureOutput()
+		}
+	}
+
 	if r.options.RemoveWildcard {
 		resolutionPool = r.resolverClient.NewResolutionPool(r.options.Threads, r.options.RemoveWildcard)
 		err := resolutionPool.InitWildcards(domain)
