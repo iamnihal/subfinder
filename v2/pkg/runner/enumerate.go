@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -25,16 +26,32 @@ func (r *Runner) EnumerateSingleDomain(domain string, writers []io.Writer) error
 
 // EnumerateSingleDomainWithCtx performs subdomain enumeration against a single domain
 func (r *Runner) EnumerateSingleDomainWithCtx(ctx context.Context, domain string, writers []io.Writer) error {
+
+	var err error
+	err = r.options.validateLibraryOptions()
+	if err != nil {
+		gologger.Fatal().Msgf("Program exiting: %s\n", err)
+	}
+
+	if r.options.ListSources {
+		listSources(r.options)
+		os.Exit(0)
+	}
+
+	if r.options.Version {
+		gologger.Info().Msgf("Current Version: %s\n", version)
+		gologger.Info().Msgf("Subfinder Config Directory: %s", configDir)
+		os.Exit(0)
+	}
+
 	gologger.Info().Msgf("Enumerating subdomains for %s\n", domain)
 
 	// Check if the user has asked to remove wildcards explicitly.
 	// If yes, create the resolution pool and get the wildcards for the current domain
 	var resolutionPool *resolve.ResolutionPool
 
-	if r.options.ResultCallback != nil {
-		if r.options.Verbose {
-			r.options.configureOutput()
-		}
+	if r.options.Verbose || r.options.NoColor || r.options.Silent {
+		r.options.configureOutput()
 	}
 
 	if r.options.RemoveWildcard {
@@ -126,7 +143,6 @@ func (r *Runner) EnumerateSingleDomainWithCtx(ctx context.Context, domain string
 	wg.Wait()
 	outputWriter := NewOutputWriter(r.options.JSON)
 	// Now output all results in output writers
-	var err error
 	for _, writer := range writers {
 		if r.options.HostIP {
 			err = outputWriter.WriteHostIP(domain, foundResults, writer)
